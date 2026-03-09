@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- New palette: slate blue / mint / cream (no black or orange) -->
+    <color name="background_dark">#0f172a</color>
+    <color name="surface">#1e293b</color>
+    <color name="surface_variant">#334155</color>
+    <color name="primary">#2dd4bf</color>
+    <color name="primary_variant">#14b8a6</color>
+    <color name="accent">#f59e0b</color>
+    <color name="accent_secondary">#a78bfa</color>
+    <color name="text_primary">#f1f5f9</color>
+    <color name="text_secondary">#94a3b8</color>
+    <color name="divider">#475569</color>
+    <color name="card_bg">#1e293b</color>
+</resources>

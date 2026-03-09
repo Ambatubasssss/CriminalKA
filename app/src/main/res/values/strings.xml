@@ -1,0 +1,33 @@
+<resources>
+    <string name="app_name">CriminalIntent</string>
+    <string name="crime_title_prefix">Crime #%1$d</string>
+    <string name="crime_title_hint">Enter a title for the crime.</string>
+    <string name="crime_solved">Solved</string>
+    <string name="new_crime">New Crime</string>
+    <string name="show_subtitle">Show Subtitle</string>
+    <string name="hide_subtitle">Hide Subtitle</string>
+    <string name="title_section">TITLE</string>
+    <string name="details_section">DETAILS</string>
+    <string name="crime_suspect">CHOOSE SUSPECT</string>
+    <string name="send_report">SEND CRIME REPORT</string>
+    <string name="add_crime">ADD CRIME</string>
+    <string name="crime_report_subject">Crime Report</string>
+    <string name="crime_report_solved">The crime is solved.</string>
+    <string name="crime_report_unsolved">The crime is not solved.</string>
+    <string name="crime_report_no_suspect">There is no suspect.</string>
+    <string name="crime_report_suspect">Suspect: %1$s.</string>
+    <string name="crime_report">Crime: %1$s\nDate: %2$s\nStatus: %3$s\n%4$s</string>
+    <string name="crime_camera">Take Photo</string>
+    <string name="crime_photo_no_image_description">No photo taken</string>
+    <string name="crime_photo_image_description">Crime photo</string>
+    <string name="no_contacts_app">No contacts app available.</string>
+    <string name="no_camera_app">No camera app available.</string>
+    <string name="contact_police">CONTACT POLICE</string>
+    <string name="contacting_police_title">Contacting Police</string>
+    <string name="contacting_police_message">Help is on the way!</string>
+
+    <plurals name="subtitle_plural">
+        <item quantity="one">%d crime</item>
+        <item quantity="other">%d crimes</item>
+    </plurals>
+</resources>
