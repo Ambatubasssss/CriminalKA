@@ -2,6 +2,8 @@ package com.example.criminalintent;
 
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.Manifest;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.net.Uri;
@@ -12,6 +14,9 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
@@ -26,6 +31,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
 
@@ -36,6 +42,8 @@ import java.util.UUID;
 public class CrimeFragment extends Fragment {
     private static final String ARG_CRIME_ID = "crime_id";
     private static final String ARG_IS_NEW_CRIME = "is_new_crime";
+
+    private static final int REQUEST_READ_CONTACTS = 1;
 
     private Crime mCrime;
     private File mPhotoFile;
@@ -56,6 +64,8 @@ public class CrimeFragment extends Fragment {
     private LinearLayout mPoliceInfoContainer;
     private EditText mPoliceNameField;
     private EditText mPoliceNumberField;
+    private Button mChooseSuspectButton;
+    private Button mCallSuspectButton;
 
     private final ActivityResultLauncher<Void> mPickContact =
         registerForActivityResult(new ActivityResultContracts.PickContact(), this::onContactSelected);
@@ -80,6 +90,7 @@ public class CrimeFragment extends Fragment {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setHasOptionsMenu(true);
         UUID crimeId = (UUID) requireArguments().getSerializable(ARG_CRIME_ID);
         mIsNewCrime = requireArguments().getBoolean(ARG_IS_NEW_CRIME, false);
 
@@ -138,6 +149,8 @@ public class CrimeFragment extends Fragment {
         mPoliceInfoContainer = view.findViewById(R.id.police_info_container);
         mPoliceNameField = view.findViewById(R.id.police_name);
         mPoliceNumberField = view.findViewById(R.id.police_number);
+        mChooseSuspectButton = view.findViewById(R.id.choose_suspect_button);
+        mCallSuspectButton = view.findViewById(R.id.call_suspect_button);
 
         mTitleField.setText(mCrime.getTitle());
         mSolvedCheckBox.setChecked(mCrime.isSolved());
@@ -146,6 +159,7 @@ public class CrimeFragment extends Fragment {
         mPoliceNumberField.setText(mCrime.getPoliceNumber());
         updateDate();
         updatePhotoView();
+        updateCallSuspectButton();
 
         // Show police info container if data exists for existing crimes
         if (!mIsNewCrime && (!mCrime.getPoliceName().isEmpty() || !mCrime.getPoliceNumber().isEmpty())) {
@@ -202,6 +216,38 @@ public class CrimeFragment extends Fragment {
             }
             @Override
             public void afterTextChanged(Editable editable) {}
+        });
+
+        mChooseSuspectButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (hasReadContactsPermission()) {
+                    launchPickContact();
+                } else {
+                    requestPermissions(
+                            new String[]{Manifest.permission.READ_CONTACTS},
+                            REQUEST_READ_CONTACTS
+                    );
+                }
+            }
+        });
+
+        mCallSuspectButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String suspect = mCrime.getSuspect();
+                String phone = mCrime.getSuspectPhone();
+                if (suspect == null || suspect.isEmpty() || phone == null || phone.isEmpty()) {
+                    return;
+                }
+
+                Uri uri = Uri.parse("tel:" + Uri.encode(phone));
+                Intent intent = new Intent(Intent.ACTION_DIAL, uri);
+                PackageManager pm = requireActivity().getPackageManager();
+                if (intent.resolveActivity(pm) != null) {
+                    startActivity(intent);
+                }
+            }
         });
 
         mSolvedCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -287,6 +333,29 @@ public class CrimeFragment extends Fragment {
     }
 
     @Override
+    public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
+        super.onCreateOptionsMenu(menu, inflater);
+        inflater.inflate(R.menu.fragment_crime, menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if (item.getItemId() == R.id.menu_delete_crime) {
+            new AlertDialog.Builder(requireContext())
+                    .setTitle("Delete crime")
+                    .setMessage("Are you sure you want to delete this crime?")
+                    .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                        CrimeLab.get(requireActivity()).removeCrime(mCrime);
+                        requireActivity().finish();
+                    })
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
     public void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putBoolean("was_added", mWasAdded);
@@ -338,7 +407,59 @@ public class CrimeFragment extends Fragment {
     }
 
     private void onContactSelected(Uri contactUri) {
-        // No longer used since we're using EditText for suspect name
+        if (contactUri == null) {
+            return;
+        }
+
+        PackageManager pm = requireActivity().getPackageManager();
+        Intent pickIntent = new Intent(Intent.ACTION_PICK, ContactsContract.Contacts.CONTENT_URI);
+        if (pickIntent.resolveActivity(pm) == null) {
+            Toast.makeText(requireContext(), "No contacts app available.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String[] queryFields = {
+                ContactsContract.Contacts._ID,
+                ContactsContract.Contacts.DISPLAY_NAME
+        };
+
+        try (Cursor cursor = requireActivity()
+                .getContentResolver()
+                .query(contactUri, queryFields, null, null, null)) {
+
+            if (cursor == null || !cursor.moveToFirst()) {
+                return;
+            }
+
+            String contactId = cursor.getString(
+                    cursor.getColumnIndexOrThrow(ContactsContract.Contacts._ID));
+            String displayName = cursor.getString(
+                    cursor.getColumnIndexOrThrow(ContactsContract.Contacts.DISPLAY_NAME));
+
+            mCrime.setSuspect(displayName);
+            mSuspectField.setText(displayName);
+
+            String phone = null;
+            String[] phoneProjection = {ContactsContract.CommonDataKinds.Phone.NUMBER};
+            try (Cursor phoneCursor = requireActivity()
+                    .getContentResolver()
+                    .query(
+                            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                            phoneProjection,
+                            ContactsContract.CommonDataKinds.Phone.CONTACT_ID + " = ?",
+                            new String[]{contactId},
+                            null
+                    )) {
+                if (phoneCursor != null && phoneCursor.moveToFirst()) {
+                    phone = phoneCursor.getString(
+                            phoneCursor.getColumnIndexOrThrow(
+                                    ContactsContract.CommonDataKinds.Phone.NUMBER));
+                }
+            }
+
+            mCrime.setSuspectPhone(phone != null ? phone : "");
+            updateCallSuspectButton();
+        }
     }
 
     private void onPhotoCaptured(Boolean didTakePhoto) {
@@ -370,5 +491,43 @@ public class CrimeFragment extends Fragment {
         Bitmap scaledBitmap = PictureUtils.getScaledBitmap(mPhotoFile.getPath(), width, height);
         mPhotoView.setImageBitmap(scaledBitmap);
         mPhotoView.setContentDescription(getString(R.string.crime_photo_image_description));
+    }
+
+    private boolean hasReadContactsPermission() {
+        return ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.READ_CONTACTS
+        ) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void launchPickContact() {
+        mPickContact.launch(null);
+    }
+
+    private void updateCallSuspectButton() {
+        if (mCallSuspectButton == null) {
+            return;
+        }
+        String suspect = mCrime.getSuspect();
+        String phone = mCrime.getSuspectPhone();
+        boolean enabled = suspect != null && !suspect.isEmpty()
+                && phone != null && !phone.isEmpty();
+        mCallSuspectButton.setEnabled(enabled);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_READ_CONTACTS) {
+            if (grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                mChooseSuspectButton.setEnabled(true);
+                launchPickContact();
+            } else {
+                mChooseSuspectButton.setEnabled(false);
+                mCallSuspectButton.setEnabled(false);
+            }
+        }
     }
 }

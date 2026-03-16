@@ -147,6 +147,29 @@
             android:textSize="16sp" />
 
         <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal"
+            android:gravity="end">
+
+            <Button
+                android:id="@+id/choose_suspect_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="CHOOSE SUSPECT"
+                style="@style/Widget.CriminalIntent.Button.Secondary" />
+
+            <Button
+                android:id="@+id/call_suspect_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="CALL SUSPECT"
+                style="@style/Widget.CriminalIntent.Button.Secondary" />
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/police_info_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

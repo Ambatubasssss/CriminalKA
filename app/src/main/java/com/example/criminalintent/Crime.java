@@ -9,6 +9,7 @@ public class Crime {
     private Date mDate;
     private boolean mSolved;
     private String mSuspect;
+    private String mSuspectPhone;
     private String mPoliceName;
     private String mPoliceNumber;
 
@@ -18,6 +19,7 @@ public class Crime {
         mTitle = "";
         mSolved = false;
         mSuspect = "";
+        mSuspectPhone = "";
         mPoliceName = "";
         mPoliceNumber = "";
     }
@@ -28,6 +30,7 @@ public class Crime {
         mTitle = "";
         mSolved = false;
         mSuspect = "";
+        mSuspectPhone = "";
         mPoliceName = "";
         mPoliceNumber = "";
     }
@@ -66,6 +69,14 @@ public class Crime {
 
     public void setSuspect(String suspect) {
         mSuspect = suspect;
+    }
+
+    public String getSuspectPhone() {
+        return mSuspectPhone;
+    }
+
+    public void setSuspectPhone(String suspectPhone) {
+        mSuspectPhone = suspectPhone;
     }
 
     public String getPoliceName() {

@@ -40,6 +40,15 @@ public class CrimeLab {
         mCrimes.add(crime);
     }
 
+    public void removeCrime(Crime crime) {
+        mCrimes.remove(crime);
+        File photoFile = getPhotoFile(crime);
+        if (photoFile.exists()) {
+            // Best-effort delete; ignore failures
+            photoFile.delete();
+        }
+    }
+
     public Crime getCrime(UUID id) {
         for (Crime crime : mCrimes) {
             if (crime.getId().equals(id)) {
