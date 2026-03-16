@@ -46,8 +46,22 @@ public class CrimeActivity extends SingleFragmentActivity {
 
     @Override
     protected Fragment createFragment() {
-        UUID crimeId = (UUID) getIntent().getSerializableExtra(EXTRA_CRIME_ID);
+        UUID crimeId = getCrimeIdFromIntent();
         boolean isNewCrime = getIntent().getBooleanExtra(EXTRA_IS_NEW_CRIME, false);
+        if (crimeId == null) {
+            crimeId = UUID.randomUUID();
+            isNewCrime = true;
+        }
         return CrimeFragment.newInstance(crimeId, isNewCrime);
+    }
+
+    @SuppressWarnings("deprecation")
+    private UUID getCrimeIdFromIntent() {
+        Intent intent = getIntent();
+        if (intent == null) return null;
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            return intent.getSerializableExtra(EXTRA_CRIME_ID, UUID.class);
+        }
+        return (UUID) intent.getSerializableExtra(EXTRA_CRIME_ID);
     }
 }

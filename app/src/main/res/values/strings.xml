@@ -24,7 +24,7 @@
     <string name="no_camera_app">No camera app available.</string>
     <string name="contact_police">CONTACT POLICE</string>
     <string name="contacting_police_title">Contacting Police</string>
-    <string name="contacting_police_message">Help is on the way!</string>
+    <string name="contacting_police_message">wait lang boy papunta na ang police na superhero mo boy!</string>
 
     <plurals name="subtitle_plural">
         <item quantity="one">%d crime</item>

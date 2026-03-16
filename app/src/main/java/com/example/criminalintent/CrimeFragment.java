@@ -109,8 +109,12 @@ public class CrimeFragment extends Fragment {
                 DatePickerFragment.REQUEST_DATE,
                 this,
                 (requestKey, bundle) -> {
-                    mCrime.setDate((java.util.Date) bundle.getSerializable(DatePickerFragment.RESULT_DATE));
-                    updateDate();
+                    if (bundle == null) return;
+                    java.util.Date date = (java.util.Date) bundle.getSerializable(DatePickerFragment.RESULT_DATE);
+                    if (date != null) {
+                        mCrime.setDate(date);
+                        updateDate();
+                    }
                 }
         );
     }
@@ -204,6 +208,12 @@ public class CrimeFragment extends Fragment {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 mCrime.setSolved(isChecked);
+                if (isChecked) {
+                    new AlertDialog.Builder(requireContext())
+                            .setMessage("na solved na ang case mo boy so close na ito eheh")
+                            .setPositiveButton(android.R.string.ok, null)
+                            .show();
+                }
             }
         });
 

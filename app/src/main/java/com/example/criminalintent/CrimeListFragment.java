@@ -163,11 +163,17 @@ public class CrimeListFragment extends Fragment {
             } else {
                 mSolvedImageView.setVisibility(View.GONE);
             }
+
+            if (mCrime.isSolved()) {
+                itemView.setBackgroundResource(R.drawable.bg_list_item_card_solved);
+            } else {
+                itemView.setBackgroundResource(R.drawable.bg_list_item_card);
+            }
         }
 
         @Override
         public void onClick(View view) {
-            Intent intent = CrimeActivity.newIntent(requireActivity(), mCrime.getId());
+            Intent intent = CrimePagerActivity.newIntent(requireActivity(), mCrime.getId());
             startActivity(intent);
         }
     }

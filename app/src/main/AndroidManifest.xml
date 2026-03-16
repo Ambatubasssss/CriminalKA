@@ -16,6 +16,10 @@
             android:exported="false"
             android:parentActivityName=".CrimeListActivity" />
         <activity
+            android:name=".CrimePagerActivity"
+            android:exported="false"
+            android:parentActivityName=".CrimeListActivity" />
+        <activity
             android:name=".CrimeListActivity"
             android:exported="true">
             <intent-filter>
