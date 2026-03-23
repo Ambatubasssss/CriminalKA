@@ -337,6 +337,13 @@ public class CrimeFragment extends Fragment {
             }
         });
 
+        mPhotoView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showPhotoPreview();
+            }
+        });
+
         mAssignPoliceButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -528,6 +535,7 @@ public class CrimeFragment extends Fragment {
         if (mPhotoFile == null || !mPhotoFile.exists()) {
             mPhotoView.setImageDrawable(null);
             mPhotoView.setContentDescription(getString(R.string.crime_photo_no_image_description));
+            mPhotoView.setEnabled(false);
             return;
         }
 
@@ -547,6 +555,28 @@ public class CrimeFragment extends Fragment {
         Bitmap scaledBitmap = PictureUtils.getScaledBitmap(mPhotoFile.getPath(), width, height);
         mPhotoView.setImageBitmap(scaledBitmap);
         mPhotoView.setContentDescription(getString(R.string.crime_photo_image_description));
+        mPhotoView.setEnabled(true);
+    }
+
+    private void showPhotoPreview() {
+        if (mPhotoFile == null || !mPhotoFile.exists()) {
+            return;
+        }
+
+        int maxWidth = getResources().getDisplayMetrics().widthPixels;
+        int maxHeight = getResources().getDisplayMetrics().heightPixels;
+        Bitmap previewBitmap = PictureUtils.getScaledBitmap(mPhotoFile.getPath(), maxWidth, maxHeight);
+
+        ImageView previewImageView = new ImageView(requireContext());
+        previewImageView.setImageBitmap(previewBitmap);
+        previewImageView.setAdjustViewBounds(true);
+        previewImageView.setBackgroundColor(0xFF000000);
+        previewImageView.setPadding(16, 16, 16, 16);
+
+        new AlertDialog.Builder(requireContext())
+                .setView(previewImageView)
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
     }
 
     private boolean hasReadContactsPermission() {
