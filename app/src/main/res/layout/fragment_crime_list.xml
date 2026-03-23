@@ -35,7 +35,7 @@
             android:id="@+id/empty_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="There are no crimes."
+            android:text="@string/welcome_no_crimes"
             android:textColor="@color/text_secondary"
             android:textSize="16sp"
             android:paddingBottom="12dp" />

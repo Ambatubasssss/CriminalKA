@@ -13,4 +13,9 @@
         android:title="@string/show_subtitle"
         app:showAsAction="never" />
 
+    <item
+        android:id="@+id/language_settings"
+        android:title="@string/language_settings"
+        app:showAsAction="never" />
+
 </menu>

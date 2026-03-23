@@ -31,6 +31,7 @@ public class CrimePagerActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        LocaleManager.applySavedLocale(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_crime_pager);
 

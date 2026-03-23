@@ -17,19 +17,48 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.ActionBar;
 import androidx.fragment.app.Fragment;
+import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.ItemTouchHelper;
 
 import java.util.List;
+import java.util.UUID;
 
 public class CrimeListFragment extends Fragment {
     private static final String SAVED_SUBTITLE_VISIBLE = "subtitle";
+    private static final int MAX_CRIMES = 10;
+    private static final String[] LANGUAGE_CODES = {"en", "es"};
+    private static final int LANGUAGE_ENGLISH_INDEX = 0;
+    private static final int LANGUAGE_SPANISH_INDEX = 1;
 
     private RecyclerView mCrimeRecyclerView;
     private CrimeAdapter mAdapter;
     private boolean mSubtitleVisible;
     private View mEmptyView;
     private Button mEmptyAddButton;
+    private Callbacks mCallbacks;
+
+    public interface Callbacks {
+        void onCrimeSelected(UUID crimeId);
+        void onCreateNewCrimeRequested();
+        void onCrimeDeleted(UUID crimeId);
+        void onCrimeAdded(UUID crimeId);
+    }
+
+    @Override
+    public void onAttach(@NonNull android.content.Context context) {
+        super.onAttach(context);
+        if (context instanceof Callbacks) {
+            mCallbacks = (Callbacks) context;
+        }
+    }
+
+    @Override
+    public void onDetach() {
+        super.onDetach();
+        mCallbacks = null;
+    }
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -56,10 +85,39 @@ public class CrimeListFragment extends Fragment {
         mEmptyAddButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = CrimeActivity.newCrimeIntent(requireActivity());
-                startActivity(intent);
+                requestNewCrime();
             }
         });
+
+        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(
+                new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
+                    @Override
+                    public boolean onMove(@NonNull RecyclerView recyclerView,
+                                          @NonNull RecyclerView.ViewHolder viewHolder,
+                                          @NonNull RecyclerView.ViewHolder target) {
+                        return false;
+                    }
+
+                    @Override
+                    public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+                        if (mAdapter == null) {
+                            return;
+                        }
+                        int position = viewHolder.getBindingAdapterPosition();
+                        if (position == RecyclerView.NO_POSITION) {
+                            return;
+                        }
+                        Crime crime = mAdapter.getCrimeAt(position);
+                        CrimeLab.get(requireActivity()).removeCrime(crime);
+                        if (mCallbacks != null) {
+                            mCallbacks.onCrimeDeleted(crime.getId());
+                        } else {
+                            updateUI();
+                        }
+                    }
+                }
+        );
+        itemTouchHelper.attachToRecyclerView(mCrimeRecyclerView);
 
         updateUI();
 
@@ -83,6 +141,11 @@ public class CrimeListFragment extends Fragment {
         super.onCreateOptionsMenu(menu, inflater);
         inflater.inflate(R.menu.fragment_crime_list, menu);
 
+        MenuItem newCrimeItem = menu.findItem(R.id.new_crime);
+        if (newCrimeItem != null) {
+            newCrimeItem.setVisible(!isAtCrimeLimit());
+        }
+
         MenuItem subtitleItem = menu.findItem(R.id.show_subtitle);
         if (mSubtitleVisible) {
             subtitleItem.setTitle(R.string.hide_subtitle);
@@ -94,8 +157,10 @@ public class CrimeListFragment extends Fragment {
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (item.getItemId() == R.id.new_crime) {
-            Intent intent = CrimeActivity.newCrimeIntent(requireActivity());
-            startActivity(intent);
+            if (isAtCrimeLimit()) {
+                return true;
+            }
+            requestNewCrime();
             return true;
         }
 
@@ -103,6 +168,11 @@ public class CrimeListFragment extends Fragment {
             mSubtitleVisible = !mSubtitleVisible;
             requireActivity().invalidateOptionsMenu();
             updateSubtitle();
+            return true;
+        }
+
+        if (item.getItemId() == R.id.language_settings) {
+            showLanguageDialog();
             return true;
         }
 
@@ -129,7 +199,52 @@ public class CrimeListFragment extends Fragment {
             mEmptyView.setVisibility(View.GONE);
         }
 
+        mEmptyAddButton.setVisibility(isAtCrimeLimit() ? View.GONE : View.VISIBLE);
+        requireActivity().invalidateOptionsMenu();
         updateSubtitle();
+    }
+
+    public void refreshUI() {
+        updateUI();
+    }
+
+    private boolean isAtCrimeLimit() {
+        return CrimeLab.get(requireActivity()).getCrimes().size() >= MAX_CRIMES;
+    }
+
+    private void requestNewCrime() {
+        if (mCallbacks != null) {
+            mCallbacks.onCreateNewCrimeRequested();
+            return;
+        }
+        Intent intent = CrimeActivity.newCrimeIntent(requireActivity());
+        startActivity(intent);
+    }
+
+    private void showLanguageDialog() {
+        String[] languageNames = {
+                getString(R.string.language_english),
+                getString(R.string.language_spanish)
+        };
+
+        int selectedIndex = getCurrentLanguageIndex();
+        new AlertDialog.Builder(requireContext())
+                .setTitle(R.string.language_settings)
+                .setSingleChoiceItems(languageNames, selectedIndex, (dialog, which) -> {
+                    LocaleManager.setLocale(requireContext(), LANGUAGE_CODES[which]);
+                    dialog.dismiss();
+                    requireActivity().recreate();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private int getCurrentLanguageIndex() {
+        String currentLanguage = LocaleManager.getSavedLanguageCode(requireContext());
+        if (LANGUAGE_CODES[LANGUAGE_SPANISH_INDEX].equals(currentLanguage)) {
+            return LANGUAGE_SPANISH_INDEX;
+        }
+        return LANGUAGE_ENGLISH_INDEX;
     }
 
     private void updateSubtitle() {
@@ -195,6 +310,10 @@ public class CrimeListFragment extends Fragment {
 
         @Override
         public void onClick(View view) {
+            if (mCallbacks != null) {
+                mCallbacks.onCrimeSelected(mCrime.getId());
+                return;
+            }
             Intent intent = CrimePagerActivity.newIntent(requireActivity(), mCrime.getId());
             startActivity(intent);
         }
@@ -227,6 +346,10 @@ public class CrimeListFragment extends Fragment {
 
         public void setCrimes(List<Crime> crimes) {
             mCrimes = crimes;
+        }
+
+        public Crime getCrimeAt(int position) {
+            return mCrimes.get(position);
         }
     }
 }

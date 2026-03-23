@@ -9,6 +9,7 @@ import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.ContactsContract;
+import android.text.TextUtils;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
@@ -66,6 +67,7 @@ public class CrimeFragment extends Fragment {
     private EditText mPoliceNumberField;
     private Button mChooseSuspectButton;
     private Button mCallSuspectButton;
+    private CrimeListFragment.Callbacks mCallbacks;
 
     private final ActivityResultLauncher<Void> mPickContact =
         registerForActivityResult(new ActivityResultContracts.PickContact(), this::onContactSelected);
@@ -85,6 +87,20 @@ public class CrimeFragment extends Fragment {
         CrimeFragment fragment = new CrimeFragment();
         fragment.setArguments(args);
         return fragment;
+    }
+
+    @Override
+    public void onAttach(@NonNull android.content.Context context) {
+        super.onAttach(context);
+        if (context instanceof CrimeListFragment.Callbacks) {
+            mCallbacks = (CrimeListFragment.Callbacks) context;
+        }
+    }
+
+    @Override
+    public void onDetach() {
+        super.onDetach();
+        mCallbacks = null;
     }
 
     @Override
@@ -189,6 +205,7 @@ public class CrimeFragment extends Fragment {
             @Override
             public void onTextChanged(CharSequence charSequence, int start, int before, int count) {
                 mCrime.setSuspect(charSequence.toString());
+                updateCallSuspectButton();
             }
 
             @Override
@@ -236,16 +253,43 @@ public class CrimeFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 String suspect = mCrime.getSuspect();
-                String phone = mCrime.getSuspectPhone();
-                if (suspect == null || suspect.isEmpty() || phone == null || phone.isEmpty()) {
+                if (suspect == null || suspect.isEmpty()) {
+                    Toast.makeText(requireContext(), "Please select a suspect first.", Toast.LENGTH_SHORT).show();
                     return;
                 }
 
-                Uri uri = Uri.parse("tel:" + Uri.encode(phone));
+                String phone = mCrime.getSuspectPhone();
+                if (phone == null || phone.isEmpty()) {
+                    if (!hasReadContactsPermission()) {
+                        requestPermissions(
+                                new String[]{Manifest.permission.READ_CONTACTS},
+                                REQUEST_READ_CONTACTS
+                        );
+                        return;
+                    }
+
+                    phone = findSuspectPhoneByName(suspect);
+                    if (phone != null && !phone.isEmpty()) {
+                        mCrime.setSuspectPhone(phone);
+                    }
+                }
+
+                if (phone == null || phone.isEmpty()) {
+                    Toast.makeText(requireContext(),
+                            "No contact number found for the selected suspect.",
+                            Toast.LENGTH_SHORT).show();
+                    updateCallSuspectButton();
+                    return;
+                }
+
+                Uri uri = Uri.parse("tel:" + Uri.encode(phone.trim()));
                 Intent intent = new Intent(Intent.ACTION_DIAL, uri);
-                PackageManager pm = requireActivity().getPackageManager();
-                if (intent.resolveActivity(pm) != null) {
+                try {
                     startActivity(intent);
+                } catch (ActivityNotFoundException exception) {
+                    Toast.makeText(requireContext(),
+                            "No dialer app available on this device.",
+                            Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -321,7 +365,12 @@ public class CrimeFragment extends Fragment {
                 public void onClick(View view) {
                     CrimeLab.get(requireActivity()).addCrime(mCrime);
                     mWasAdded = true;
-                    requireActivity().finish();
+                    switchToExistingCrimeMode();
+                    if (mCallbacks != null) {
+                        mCallbacks.onCrimeAdded(mCrime.getId());
+                    } else {
+                        requireActivity().finish();
+                    }
                 }
             });
         } else {
@@ -345,14 +394,28 @@ public class CrimeFragment extends Fragment {
                     .setTitle("Delete crime")
                     .setMessage("Are you sure you want to delete this crime?")
                     .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                        UUID idToDelete = mCrime.getId();
                         CrimeLab.get(requireActivity()).removeCrime(mCrime);
-                        requireActivity().finish();
+                        if (mCallbacks != null) {
+                            mCallbacks.onCrimeDeleted(idToDelete);
+                        } else {
+                            requireActivity().finish();
+                        }
                     })
                     .setNegativeButton(android.R.string.cancel, null)
                     .show();
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void switchToExistingCrimeMode() {
+        if (mAddCrimeButton != null) {
+            mAddCrimeButton.setVisibility(View.GONE);
+        }
+        if (mContactPoliceButton != null) {
+            mContactPoliceButton.setVisibility(View.VISIBLE);
+        }
     }
 
     @Override
@@ -408,13 +471,6 @@ public class CrimeFragment extends Fragment {
 
     private void onContactSelected(Uri contactUri) {
         if (contactUri == null) {
-            return;
-        }
-
-        PackageManager pm = requireActivity().getPackageManager();
-        Intent pickIntent = new Intent(Intent.ACTION_PICK, ContactsContract.Contacts.CONTENT_URI);
-        if (pickIntent.resolveActivity(pm) == null) {
-            Toast.makeText(requireContext(), "No contacts app available.", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -509,10 +565,35 @@ public class CrimeFragment extends Fragment {
             return;
         }
         String suspect = mCrime.getSuspect();
-        String phone = mCrime.getSuspectPhone();
-        boolean enabled = suspect != null && !suspect.isEmpty()
-                && phone != null && !phone.isEmpty();
+        boolean enabled = suspect != null && !suspect.isEmpty();
         mCallSuspectButton.setEnabled(enabled);
+    }
+
+    private String findSuspectPhoneByName(String suspectName) {
+        if (TextUtils.isEmpty(suspectName)) {
+            return "";
+        }
+
+        String[] projection = {ContactsContract.CommonDataKinds.Phone.NUMBER};
+        String selection = ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " LIKE ?";
+        String[] selectionArgs = new String[]{"%" + suspectName + "%"};
+
+        try (Cursor cursor = requireActivity()
+                .getContentResolver()
+                .query(
+                        ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                        projection,
+                        selection,
+                        selectionArgs,
+                        null
+                )) {
+            if (cursor != null && cursor.moveToFirst()) {
+                return cursor.getString(
+                        cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER));
+            }
+        }
+
+        return "";
     }
 
     @Override

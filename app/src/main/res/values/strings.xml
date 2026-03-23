@@ -25,6 +25,11 @@
     <string name="contact_police">CONTACT POLICE</string>
     <string name="contacting_police_title">Contacting Police</string>
     <string name="contacting_police_message">wait lang boy papunta na ang police na superhero mo boy!</string>
+    <string name="language_settings">Language Settings</string>
+    <string name="language_english">English</string>
+    <string name="language_spanish">Spanish</string>
+    <string name="welcome_no_crimes">Welcome! No crimes yet. Tap Add Crime to begin.</string>
+    <string name="tablet_empty_detail_message">Select a crime from the list.</string>
 
     <plurals name="subtitle_plural">
         <item quantity="one">%d crime</item>

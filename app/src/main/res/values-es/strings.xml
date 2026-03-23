@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">CriminalIntent</string>
+    <string name="new_crime">Nuevo Crimen</string>
+    <string name="show_subtitle">Mostrar Subtitulo</string>
+    <string name="hide_subtitle">Ocultar Subtitulo</string>
+    <string name="add_crime">AGREGAR CRIMEN</string>
+    <string name="send_report">ENVIAR REPORTE</string>
+    <string name="contact_police">CONTACTAR POLICIA</string>
+    <string name="language_settings">Configuracion de idioma</string>
+    <string name="language_english">Ingles</string>
+    <string name="language_spanish">Espanol</string>
+    <string name="welcome_no_crimes">Bienvenido. Aun no hay crimenes. Toca Agregar Crimen para comenzar.</string>
+    <string name="tablet_empty_detail_message">Selecciona un crimen de la lista.</string>
+</resources>
